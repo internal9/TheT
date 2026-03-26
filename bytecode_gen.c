@@ -118,7 +118,7 @@ expr(int prec_limit)
                         printf("MOV R2, R VAR AT C:%ld\n", p_right->column);
                 }
 
-                if (p_left->type == PAREN_L) {
+                if (p_left->type == PAREN_L) { // if p_right is paren_l, prpb just atssume !r1 usew then
                         if (!R1_use) {
                                 // assume was pushed due to another expr, like on right operand, or due to higher prec operator
                                 puts("POP R1");
