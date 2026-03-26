@@ -417,10 +417,15 @@ static inline void init_keywords_map(void)
                                 (int) KW_BOOL + i);
 }
 
+static bool REACHED_END = false; // prob a better way to do this
+
 // TODO: deal with 'src_i' & 'column'
 // IDK: find a way to clean up repititve code
 enum TkType lex_next(struct Tk *p_tk)
 {
+        // find a better way to handle this lol
+        if (REACHED_END == true)
+                ERREXIT("Attempt to lex when EOF is reached");
         handle_non_lexable();
         memset(p_tk, 0, sizeof(struct Tk));
         p_tk->line = src_line;
@@ -447,7 +452,7 @@ enum TkType lex_next(struct Tk *p_tk)
                         p_tk->type_group = G_OP_ARITH;
                         p_tk->type = OP_INC;
                 } else
-                        lex_op_other_or_assign(p_tk, G_OP_ARITH, OP_SUB, OP_SUB_AS);
+                        lex_op_other_or_assign(p_tk, G_OP_ARITH, OP_ADD, OP_ADD_AS);
                 break;
         case '-':
                 INCPOS();
@@ -623,6 +628,7 @@ enum TkType lex_next(struct Tk *p_tk)
                 p_tk->type = END;
                 // cleanup, since end of file
                 hashmap_free(&keywords_hashmap);
+                REACHED_END = true;
                 break;
         default:
                 if (isdigit(c))
