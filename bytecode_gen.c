@@ -13,7 +13,7 @@
                                          tk.line, tk.column, __VA_ARGS__)
 // buffer tb for multiple tks? incase of backtracking, etc
 static struct Tk tk;
-
+// TBD: static struct Tk buf[some arbitrary num like 512];
 
 void gen_from_ident(struct Tk *p_tk, bool allow_standalone)
 {
@@ -61,23 +61,22 @@ inline static int prec(enum TkType tk_type)
 static int
 expr(int prec_limit)
 {
-        static struct Tk buf[512];
+        /*        static struct Tk buf[512];
         static int i = 0;
         static bool R1_use = false;
 
         int start_i = i;
         struct Tk *p_left = buf + i;
-        struct Tk *p_op; // = buf + (++i);
-        struct Tk *p_right;
+        struct Tk *p_right; */
 
-        lex_next(p_left);
-        if (p_left->type == END)
-                puts("Expected expression for operand"), exit(1);
+        struct Tk left;
+        lex_next(&left); // p_left);
+        if (left.type == END) // TODO: handle unexpected tks too
+                puts("Expected expression"), exit(1);
 
-        //        printf("p_LEFT value: %ld\n", p_left->value.int_v );
-        switch(p_left->type) {
+        switch(left.type) {
         case LIT_INT: break;
-        case PAREN_L: expr(0);
+        case PAREN_L: expr(0); // prob mov this TO A DIFF func
                 // andd the rest for later
         default:
                 // handle non-expr tk
@@ -86,60 +85,34 @@ expr(int prec_limit)
         int ret_val = LIT;
         int p;
 
+        struct Tk o;
+        struct Tk *p_op = &o;
+        lex_next(p_op); // = buf + (++i));
 
         // operator, take into account POW '^' later bc right assosciativity
-        while (printf("%d\n", (p = prec( lex_next(p_op = buf + (++i)) ), p)) > prec_limit) {
-                ret_val = EXPR; // temp ugly solution
-                i++;
+        while ((p = prec(p_op->type)) > prec_limit) {
+                // i++;
                 expr(p);
-                //                printf("OP: %d\n", p_op->type);
-
-                /*
-                if (expr(p) == LIT) {
+                // barebones for testing
+                if (tk.type == LIT_INT) {
                         // temp debug
-                        printf("MOV R2, %ld\n", tk.column);
+                        printf("MOV R2, VAR AT C%ld\n", tk.column);
                 }
-                else { // SUB_EXPR
+                else { // sub expr
                         puts("MOV R2, R1");
-                        R1_use = false;
-                }
-                */
-
-                p_right = buf + i;
-                //                printf("index %d\n", i);
-                //                printf("value r %d\n", p_right->value.int_v);
-                // fucking fix this
-                if (p_right->type == PAREN_L) {
-                        // temp debug
-                        puts("MOV R2, R1");
-                        R1_use = false;
-                }
-                else {
-                        printf("MOV R2, R VAR AT C:%ld\n", p_right->column);
                 }
 
-                if (p_left->type == PAREN_L) { // if p_right is paren_l, prpb just atssume !r1 usew then
-                        if (!R1_use) {
-                                // assume was pushed due to another expr, like on right operand, or due to higher prec operator
-                                puts("POP R1");
-                                R1_use = true;
-                        } // else assume R1 is in a case like (a+b)*c, where (a+b) is 'OP_L'
+                if (left.type == PAREN_L) {
+                        // R1 already in use, unpushed
                 }
-                else {
-                        if (R1_use) puts("PSH R1");
-                        printf("MOV R1, L VAR AT C:%ld\n", p_left->column);
+                else { // standalone lit
+                        printf("MOV R1, VAR AT C%ld\n", left.column);
                 }
-                puts("INSTR R1, R2");
-                p_left->type = PAREN_L; // to represent expr, yeah
+
+                printf("%d\n", tk.type);
         }
-        printf("%d %d v: %d\n", p, p_op->type, p_left->value.int_v);
-                
-        //        printf("P_OP: %d from %d\n", p_op->type, p_left->value.int_v);
-        //      printf("P: %d\n", p);
-
-        //        printf("PREC: %d, %d\n", p, i);
-        i = start_i;
-        return ret_val;
+        //        printf("prec: %d\n", p);
+        return 1;
 }
 
 // account for floating-points later, cuz fp regs
