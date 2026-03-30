@@ -48,35 +48,53 @@ static void prefix_expr(struct Tk *p_tk)
 inline static int prec(enum TkType tk_type)
 {
         switch (tk_type) {
-        case OP_ADD: return 1;
-        case OP_MUL: return 2;
+        case OP_ADD:
+        case OP_SUB: return 1;
+                
+        case OP_MUL:
+        case OP_DIV: return 2;
+
+        case OP_POW: return 3;
         default: return -1;
+        }
+}
+
+// temp debug
+static void instr_debug(enum TkType type)
+{
+        switch (type) {
+        case OP_ADD: puts("ADD R1, R2"); break;
+        case OP_SUB: puts("SUB R1, R2"); break;
+        case OP_MUL: puts("MUL R1, R2"); break;
+        case OP_DIV: puts("DIV R1, R2"); break;
+        case OP_POW: puts("POW R1, R2"); break;
+        default: break;
         }
 }
 
 #define LIT 0
 #define EXPR 1
 
+static bool R1_use = false;
+
 // unnamed aggregate objects allowed (e.g. func((int) {'a', 2, 5}); func({.asd = 20})
 static int
-expr(int prec_limit)
+expr(int prec_limit, struct Tk *p_peek_tk)
 {
-        /*        static struct Tk buf[512];
-        static int i = 0;
         static bool R1_use = false;
-
-        int start_i = i;
-        struct Tk *p_left = buf + i;
-        struct Tk *p_right; */
-
         struct Tk left;
-        lex_next(&left); // p_left);
-        if (left.type == END) // TODO: handle unexpected tks too
+        if (p_peek_tk == NULL)
+                p_peek_tk = &left;
+
+        lex_next(p_peek_tk); // &left);
+        if (p_peek_tk->type == END) // TODO: handle unexpected tks too
                 puts("Expected expression"), exit(1);
 
-        switch(left.type) {
+        // printf("LEFT: %d\n", p_peek_tk->type);
+        // fix this so tk can be read after non-expr tk stops expr
+        switch(p_peek_tk->type) {
         case LIT_INT: break;
-        case PAREN_L: expr(0); // prob mov this TO A DIFF func
+        case PAREN_L: expr(0, NULL); // prob mov this TO A DIFF func
                 // andd the rest for later
         default:
                 // handle non-expr tk
@@ -85,33 +103,56 @@ expr(int prec_limit)
         int ret_val = LIT;
         int p;
 
-        struct Tk o;
-        struct Tk *p_op = &o;
+        struct Tk *p_op = &tk;
         lex_next(p_op); // = buf + (++i));
+        bool sub = false;
+        enum TkType o_t;
 
+        //        printf("OP TYPE: %d\n", o.type);
         // operator, take into account POW '^' later bc right assosciativity
-        while ((p = prec(p_op->type)) > prec_limit) {
+        while ((p = prec(o_t = p_op->type)), (p == 3 || p > prec_limit)) {
+                sub = true; // bad
                 // i++;
-                expr(p);
-                // barebones for testing
-                if (tk.type == LIT_INT) {
+                struct Tk right;
+                expr(p, &right);
+
+                // printf("%d RIGHT: %d\n", p_peek_tk->value.int_v, right.type == PAREN_L);
+                if (right.type == LIT_INT) {
                         // temp debug
-                        printf("MOV R2, VAR AT C%ld\n", tk.column);
+                        printf("MOV R2, VAR AT C%ld\n", right.column);
                 }
                 else { // sub expr
+                        R1_use = false;
                         puts("MOV R2, R1");
                 }
 
-                if (left.type == PAREN_L) {
+                if (p_peek_tk->type == PAREN_L) {
+                        if (!R1_use) {
+                                puts("POP R1");
+                                R1_use = true;
+                        }
                         // R1 already in use, unpushed
                 }
                 else { // standalone lit
-                        printf("MOV R1, VAR AT C%ld\n", left.column);
+                        if (R1_use)
+                                puts("PUSH R1");
+                        else
+                                R1_use = true;
+                        printf("MOV R1, VAR AT C%ld\n", p_peek_tk->column);
                 }
 
-                printf("%d\n", tk.type);
+                //                printf("%d\n", l);
+                //                printf("OP: %d\n", p_op->type);
+
+                instr_debug(o_t);
+                if (p_op->type == END) break;
+                p_peek_tk->type = PAREN_L;
         }
         //        printf("prec: %d\n", p);
+
+        if (sub) p_peek_tk->type = PAREN_L;
+        // printf("%d\n", p_peek_tk->value.int_v), p_peek_tk->type = PAREN_L;
+        // printf("%d\n", p_peek_tk->type == PAREN_L);
         return 1;
 }
 
@@ -155,7 +196,7 @@ uint8_t *
 bytecode_gen_nofile(void)
 {
         // 'main.c' initialized lexer, maybe change that cuz a lil confusing
-        expr(0);
+        expr(0, NULL);
 
         return NULL;
 }
