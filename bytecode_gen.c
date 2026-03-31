@@ -8,12 +8,30 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define tk_err(tk, MSG) fprintf(stderr, "(L%ld C%ld)" MSG, tk.line, tk.column)
-#define tk_err_fmt(tk, FMT, ...) fprintf(stderr, "(L%ld C%ld)" MSG, \
+#define tk_err(tk, MSG) fprintf(stderr, "(L%ld C%ld) " MSG "\n", tk.line, tk.column)
+#define tk_err_fmt(tk, FMT, ...) fprintf(stderr, "(L%ld C%ld) " MSG "\n", \
                                          tk.line, tk.column, __VA_ARGS__)
+
 // buffer tb for multiple tks? incase of backtracking, etc
 static struct Tk tk;
 // TBD: static struct Tk buf[some arbitrary num like 512];
+/* uint8_t *bytecode;
+static void instr_write_2args()
+{
+
+}
+
+static void instr_write_1arg()
+{
+
+}
+
+static void instr_write_2args()
+{
+
+} */
+
+// emit(MOVSI, st_addr(), rm(bsize(arg)), arg)
 
 void gen_from_ident(struct Tk *p_tk, bool allow_standalone)
 {
@@ -72,61 +90,66 @@ static void instr_debug(enum TkType type)
         }
 }
 
-#define LIT 0
-#define EXPR 1
-
-static bool R1_use = false;
+// static struct Tk buf[512];
 
 // unnamed aggregate objects allowed (e.g. func((int) {'a', 2, 5}); func({.asd = 20})
-static int
-expr(int prec_limit, struct Tk *p_peek_tk)
+
+/*
+  Pratt-parser but...
+  probably the worst thing written here
+*/
+/*
+  Returns 'true' if it compiled an expression e.g 'a+b',
+  rather than a standalone literal e.g. '2'
+*/
+static bool
+expr(int prec_limit)
 {
         static bool R1_use = false;
+        static struct Tk right;
         struct Tk left;
-        if (p_peek_tk == NULL)
-                p_peek_tk = &left;
 
-        lex_next(p_peek_tk); // &left);
-        if (p_peek_tk->type == END) // TODO: handle unexpected tks too
+        lex_next(&left);
+        if (left.type == END) // TODO: handle unexpected tks too
                 puts("Expected expression"), exit(1);
 
-        // printf("LEFT: %d\n", p_peek_tk->type);
-        // fix this so tk can be read after non-expr tk stops expr
-        switch(p_peek_tk->type) {
+        bool is_left_expr = false;
+        switch(left.type) {
         case LIT_INT: break;
-        case PAREN_L: expr(0, NULL); // prob mov this TO A DIFF func
+        case PAREN_L:
+                is_left_expr = expr(0);
+                if (tk.type != PAREN_R)
+                        tk_err(tk, "Expected ')'");
+                break;
                 // andd the rest for later
         default:
                 // handle non-expr tk
         }
 
-        int ret_val = LIT;
-        int p;
-
-        struct Tk *p_op = &tk;
+        struct Tk *p_op = &tk;  // allow for lookaheads when expr ends e.g. 2+3-< END tk after '3'
         lex_next(p_op); // = buf + (++i));
-        bool sub = false;
-        enum TkType o_t;
+        enum TkType op_type = p_op->type;
+        bool has_operators = true;
 
-        //        printf("OP TYPE: %d\n", o.type);
-        // operator, take into account POW '^' later bc right assosciativity
-        while ((p = prec(o_t = p_op->type)), (p == 3 || p > prec_limit)) {
-                sub = true; // bad
-                // i++;
-                struct Tk right;
-                expr(p, &right);
+        int p = prec(op_type);
+        if (p <= prec_limit && p != 3) {
+                has_operators = false;
+                goto no_operators;
+        }
+                     
+        for (; p == 3 || p > prec_limit; p = prec(p_op->type)) {
+                bool is_right_sub_expr = expr(p);
 
-                // printf("%d RIGHT: %d\n", p_peek_tk->value.int_v, right.type == PAREN_L);
-                if (right.type == LIT_INT) {
-                        // temp debug
-                        printf("MOV R2, VAR AT C%ld\n", right.column);
-                }
-                else { // sub expr
+                if (is_right_sub_expr) {
                         R1_use = false;
                         puts("MOV R2, R1");
                 }
+                else {
+                        printf("MOV R2, VAR AT C%ld\n", right.column);
+                }
 
-                if (p_peek_tk->type == PAREN_L) {
+                if (is_left_expr) { // left.type == PAREN_L) {
+                        printf("%ld %d\n", left.column, is_left_expr);
                         if (!R1_use) {
                                 puts("POP R1");
                                 R1_use = true;
@@ -138,22 +161,20 @@ expr(int prec_limit, struct Tk *p_peek_tk)
                                 puts("PUSH R1");
                         else
                                 R1_use = true;
-                        printf("MOV R1, VAR AT C%ld\n", p_peek_tk->column);
+                        printf("MOV R1, VAR AT C%ld\n", left.column);
                 }
 
-                //                printf("%d\n", l);
-                //                printf("OP: %d\n", p_op->type);
-
-                instr_debug(o_t);
-                if (p_op->type == END) break;
-                p_peek_tk->type = PAREN_L;
+                instr_debug(op_type);
+                op_type = p_op->type;
+                is_left_expr = true; // i don't like this
         }
-        //        printf("prec: %d\n", p);
 
-        if (sub) p_peek_tk->type = PAREN_L;
-        // printf("%d\n", p_peek_tk->value.int_v), p_peek_tk->type = PAREN_L;
-        // printf("%d\n", p_peek_tk->type == PAREN_L);
-        return 1;
+ no_operators:
+        memcpy(&right, &left, sizeof(struct Tk));
+        //        if (!is_left_expr)
+                //                printf("MOV R1, VAR AT C%ld\n", left.column);
+
+        return has_operators || is_left_expr;
 }
 
 // account for floating-points later, cuz fp regs
@@ -196,7 +217,7 @@ uint8_t *
 bytecode_gen_nofile(void)
 {
         // 'main.c' initialized lexer, maybe change that cuz a lil confusing
-        expr(0, NULL);
+        expr(0);
 
         return NULL;
 }
