@@ -1,5 +1,6 @@
-// lex literals (e.g. LIT_BOOL)
-// init lexing here instead of in main.c?
+// TBD: switch to buffers to store tks, just for easier handling
+// TBD: lex literals (e.g. LIT_BOOL)
+// TBD: init lexing here instead of in main.c?
 #include "lex.h"
 #include "VM.h"
 #include <stdlib.h>
@@ -14,6 +15,9 @@
 
 // buffer tb for multiple tks? incase of backtracking, etc
 static struct Tk tk;
+#define BUF_S 512
+static struct Tk buf[BUF_S];
+static int i = 0;
 // TBD: static struct Tk buf[some arbitrary num like 512];
 /* uint8_t *bytecode;
 static void instr_write_2args()
@@ -32,6 +36,30 @@ static void instr_write_2args()
 } */
 
 // emit(MOVSI, st_addr(), rm(bsize(arg)), arg)
+
+struct Tk *next_tk()
+{
+  lex_next(&buf[i++]);
+  return buf + i;
+}
+
+/*
+struct Tk *get_tk(int index)
+{
+  return buf + index;
+}
+*/
+
+struct Tk *peek_tk()
+{
+  //return get_tk(i-1);
+  return buf + (i-1);
+}
+
+struct Tk *pop_tk()
+{
+  return buf + --i;  // leave top as garbage
+}
 
 void gen_from_ident(struct Tk *p_tk, bool allow_standalone)
 {
@@ -218,7 +246,7 @@ bytecode_gen_nofile(void)
 {
         // 'main.c' initialized lexer, maybe change that cuz a lil confusing
         expr(0);
-
+        
         return NULL;
 }
 
