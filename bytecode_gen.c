@@ -17,9 +17,10 @@
 
 // emit(MOVSI, st_addr(), rm(bsize(arg)), arg)
 
+static struct Tk tk;
 static struct Tk buf[512];
 static int buf_i = 0;
-static int tk_count = 0;
+static int tk_count = 0; // prob simplify this
 
 static struct Tk *next_tk(void)
 {
@@ -60,12 +61,12 @@ struct Tk *pop_tk()
 }
 */
 
-/*
+
 static void tk_buf_clear(void)
 {
         buf_i = tk_count = 0;
 }
-*/
+
 /*
 void gen_from_ident(struct Tk *p_tk, bool allow_standalone)
 {
@@ -213,6 +214,12 @@ expr(struct Tk *p_left, int prec_limit, bool is_expr_start)
                 p_op = peek_tk();
                 prec = op_prec(p_op->type);
         } while (prec == 3 || prec > prec_limit);
+
+        // TBD
+        if (is_expr_start) {
+                memcpy(&tk, next_tk(), sizeof(struct Tk));
+                tk_buf_clear();
+        }
         return true;
 }
 
@@ -256,7 +263,8 @@ uint8_t *
 bytecode_gen_nofile(void)
 {
         // 'main.c' initialized lexer, maybe change that cuz a lil confusing
-        expr(next_tk(), 0, false);
+        expr(next_tk(), 0, true);
+        printf("%d\n", tk.type);
 
         /*
         struct Tk tk;
@@ -271,11 +279,9 @@ bytecode_gen_nofile(void)
                         break;
                 }
 
-                memcpy(&tk, peek_tk()); // why
-                tk_buf_clear();
+                
         }
         */
-
         return NULL;
 }
 
