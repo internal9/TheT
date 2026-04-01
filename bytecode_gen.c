@@ -260,7 +260,8 @@ bytecode_gen_nofile(void)
 
         /*
         struct Tk tk;
-        while (memcpy(&tk, peek_tk())->type != END) {
+        lex_next(&tk);
+        while (tk.type != END) {
                 switch (tk.type) {
                 case LIT_INT:
                 case LIT_NUM:
@@ -270,10 +271,11 @@ bytecode_gen_nofile(void)
                         break;
                 }
 
-                // fix
+                memcpy(&tk, peek_tk()); // why
                 tk_buf_clear();
         }
         */
+
         return NULL;
 }
 
