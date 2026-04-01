@@ -9,15 +9,15 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define tk_err(tk, MSG) fprintf(stderr, "(L%ld C%ld) " MSG "\n", tk.line, tk.column)
-#define tk_err_fmt(tk, FMT, ...) fprintf(stderr, "(L%ld C%ld) " MSG "\n", \
-                                         tk.line, tk.column, __VA_ARGS__)
+#define tk_err(p_tk, MSG) fprintf(stderr, "(L%ld C%ld) " MSG "\n", tk->line, tk->column)
+#define tk_err_fmt(p_tk, FMT, ...) fprintf(stderr, "(L%ld C%ld) " MSG "\n", \
+                                         tk->line, tk->column, __VA_ARGS__)
 
-// buffer tb for multiple tks? incase of backtracking, etc
-static struct Tk tk;
+// static struct Tk tk;
+
 #define BUF_S 512
 static struct Tk buf[BUF_S];
-static int buf_i = 0;
+static int buf_i = 0;  // index AFTER last tk
 static int lex_count = 0;
 // TBD: static struct Tk buf[some arbitrary num like 512];
 /* uint8_t *bytecode;
@@ -40,11 +40,11 @@ static void instr_write_2args()
 
 struct Tk *next_tk()
 {
-  if (buf_i++ == lex_count) {
+  if (buf_i == lex_count) {
     lex_next(buf + buf_i);
     lex_count++;
   }
-  return buf + i;
+  return buf + buf_i++;
 }
 
 struct Tk *get_tk(int index)
@@ -54,14 +54,17 @@ struct Tk *get_tk(int index)
 
 struct Tk *peek_tk()
 {
-  if (buf_i == lex_count++)
+  if (buf_i == lex_count) {
     lex_next(buf + buf_i);
+    lex_count++;
+  }
   return buf + buf_i;
 }
 
+// remove?
 struct Tk *pop_tk()
 {
-  return buf + --i;  // leave top as garbage
+  return buf + --buf_i;  // leave top as garbage
 }
 
 void tk_buf_clear()
@@ -135,57 +138,50 @@ static void instr_debug(enum TkType type)
   probably the worst thing written here
 */
 /*
-  Returns 'true' if it compiled an expression e.g 'a+b',
+  Returns 'true' if it compiled an expression with operators e.g 'a+b',
   rather than a standalone literal e.g. '2'
 */
 static bool
-expr(struct Tkint prec_limit)
+expr(struct Tk *p_left, int prec_limit)
 {
         static bool R1_use = false;
-        static struct Tk right;
-        struct Tk left;
-
-        lex_next(&left);
-        if (left.type == END) // TODO: handle unexpected tks too
-                puts("Expected expression"), exit(1);
 
         bool is_left_expr = false;
-        switch(left.type) {
+        switch(p_left.type) {
         case LIT_INT: break;
         case PAREN_L:
-                is_left_expr = expr(0);
-                if (tk.type != PAREN_R)
-                        tk_err(tk, "Expected ')'");
+                is_left_expr = expr(next_tk(), 0);
+                struct Tk *p_tk = next_tk();
+                if (p_tk->type != PAREN_R)  // if (tk.type != PAREN_R)
+                        tk_err(p_tk, "Expected ')'");
                 break;
                 // andd the rest for later
         default:
                 // handle non-expr tk
         }
 
-        struct Tk *p_op = &tk;  // allow for lookaheads when expr ends e.g. 2+3-< END tk after '3'
-        lex_next(p_op); // = buf + (++i));
-        enum TkType op_type = p_op->type;
-        bool has_operators = true;
+        struct Tk *p_op = peek_tk();
 
-        int p = prec(op_type);
+        int p = prec(p_op->type);
         if (p <= prec_limit && p != 3) {
-                has_operators = false;
-                goto no_operators;
+                if (is_left_expr) return true;  // compiled an expr with operators
+                if (p == 0)  // 'p == 0' start of overall expr
+                  printf("MOV R1, VAR AT C%ld: %ld\n", p_left->column, p_left->value.int_v);
+                return false;  // standalone literal
         }
                      
-        for (; p == 3 || p > prec_limit; p = prec(p_op->type)) {
+        do {
                 bool is_right_sub_expr = expr(p);
-
                 if (is_right_sub_expr) {
                         R1_use = false;
                         puts("MOV R2, R1");
                 }
                 else {
-                        printf("MOV R2, VAR AT C%ld\n", right.column);
+                        struct Tk *p_right = peek_tk();
+                        printf("MOV R2, VAR AT C%ld\n", p_right->column);
                 }
 
-                if (is_left_expr) { // left.type == PAREN_L) {
-                        printf("%ld %d\n", left.column, is_left_expr);
+                if (is_left_expr) {
                         if (!R1_use) {
                                 puts("POP R1");
                                 R1_use = true;
@@ -200,17 +196,14 @@ expr(struct Tkint prec_limit)
                         printf("MOV R1, VAR AT C%ld\n", left.column);
                 }
 
-                instr_debug(op_type);
-                op_type = p_op->type;
+                instr_debug(p_op->type);
                 is_left_expr = true; // i don't like this
-        }
 
- no_operators:
-        memcpy(&right, &left, sizeof(struct Tk));
-        //        if (!is_left_expr)
-                //                printf("MOV R1, VAR AT C%ld\n", left.column);
+                p = prec(p_op->type);
+        } while (p == 3 || p > prec_limit;);
 
-        return has_operators || is_left_expr;
+        return true;
+        // return has_operators || is_left_expr;
 }
 
 // account for floating-points later, cuz fp regs
