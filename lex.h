@@ -79,7 +79,7 @@ enum TkType {
           or are only ones serving *unique* purposes
         */
         IDENTIFIER,        
-        END, // aka 'eof' but conflicts with C macros
+        END = 5000, // aka 'eof' but conflicts with C macros
         PAREN_L,
         PAREN_R,
         BRACKET_L,
