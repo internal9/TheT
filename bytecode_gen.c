@@ -17,7 +17,8 @@
 static struct Tk tk;
 #define BUF_S 512
 static struct Tk buf[BUF_S];
-static int i = 0;
+static int buf_i = 0;
+static int lex_count = 0;
 // TBD: static struct Tk buf[some arbitrary num like 512];
 /* uint8_t *bytecode;
 static void instr_write_2args()
@@ -39,26 +40,33 @@ static void instr_write_2args()
 
 struct Tk *next_tk()
 {
-  lex_next(&buf[i++]);
+  if (buf_i++ == lex_count) {
+    lex_next(buf + buf_i);
+    lex_count++;
+  }
   return buf + i;
 }
 
-/*
 struct Tk *get_tk(int index)
 {
   return buf + index;
 }
-*/
 
 struct Tk *peek_tk()
 {
-  //return get_tk(i-1);
-  return buf + (i-1);
+  if (buf_i == lex_count++)
+    lex_next(buf + buf_i);
+  return buf + buf_i;
 }
 
 struct Tk *pop_tk()
 {
   return buf + --i;  // leave top as garbage
+}
+
+void tk_buf_clear()
+{
+  buf_i = lex_count = 0;
 }
 
 void gen_from_ident(struct Tk *p_tk, bool allow_standalone)
@@ -131,7 +139,7 @@ static void instr_debug(enum TkType type)
   rather than a standalone literal e.g. '2'
 */
 static bool
-expr(int prec_limit)
+expr(struct Tkint prec_limit)
 {
         static bool R1_use = false;
         static struct Tk right;
