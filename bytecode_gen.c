@@ -178,7 +178,7 @@ expr(struct Tk *p_left, int prec_limit)
                 }
                 else {
                         struct Tk *p_right = peek_tk();
-                        printf("MOV R2, VAR AT C%ld\n", p_right->column);
+                        printf("MOV R2, VAR AT C%ld: %ld\n", p_right->column, p_right->value.int_v);
                 }
 
                 if (is_left_expr) {
@@ -193,7 +193,7 @@ expr(struct Tk *p_left, int prec_limit)
                                 puts("PUSH R1");
                         else
                                 R1_use = true;
-                        printf("MOV R1, VAR AT C%ld\n", left.column);
+                        printf("MOV R1, VAR AT C%ld: %ld\n", p_left->column, p_left->value.int_v);
                 }
 
                 instr_debug(p_op->type);
