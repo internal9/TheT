@@ -2,20 +2,33 @@
 // init lexing here instead of in main.c?
 #include "lex.h"
 #include "VM.h"
+#include "hashmap.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
 
-#define tk_err(p_tk, MSG) fprintf(stderr, "(L%ld C%ld) " MSG "\n", p_tk->line, p_tk->column)
+#define tk_err(p_tk, MSG) fprintf(stderr, "(L%ld C%ld) " MSG "\n", (p_tk)->line, (p_tk)->column)
 #define tk_err_fmt(p_tk, FMT, ...) fprintf(stderr, "(L%ld C%ld) " MSG "\n", \
-                                         p_tk->line, p_tk->column, __VA_ARGS__)
+                                         (p_tk)->line, (p_tk)->column, __VA_ARGS__)
 
 // static struct Tk tk;
 // TBD: static struct Tk buf[some arbitrary num like 512];
 
 // emit(MOVSI, st_addr(), rm(bsize(arg)), arg)
+
+enum DataType {
+        INT,
+        NUM,
+        // bla bla bla..
+};
+
+struct Symbol {
+        DataType type;
+        long st_addr;
+        
+}
 
 static struct Tk tk;
 static struct Tk buf[512];
@@ -106,10 +119,8 @@ static inline int op_prec(enum TkType tk_type)
         switch (tk_type) {
         case OP_ADD:
         case OP_SUB: return 1;
-                
         case OP_MUL:
         case OP_DIV: return 2;
-
         case OP_POW: return 3;
         default: return -1;
         }
@@ -225,63 +236,74 @@ expr(struct Tk *p_left, int prec_limit, bool is_expr_start)
 
 // account for floating-points later, cuz fp regs
 
-/* static void
-decl(enum TkType value_type)
+static void
+gen_decl(enum TkType kw_type)
 {
-        uint8_t *code;
-        if (lex_next(&tk) != IDENTIFIER) {
-                // error
-                printf("no\n");
+        if (lex_next(&tk) != IDENT) {
+                tk_err(&tk, "Expected identifier");
                 exit(1);
         }
 
-        char *id = tk.txt;
         if (lex_next(&tk) != OP_AS) {
-                var(id
-                return 1;
+                
+                return;
         }
-        // expr();
-        // allow int to be assigned to char?
-        if (lex_next(&tk) != value_type) {
-                tk_err_fmt("Expected '=' instead of ");
-                                  
+                
+        switch (kw_type) {
+        case KW_BOOL:
+                //               push_bool();
+        case KW_CHAR:
+        case KW_INT:
+        case KW_NUM:                
+        case KW_STRING:
+        case KW_ARRAY:
+        case KW_STRUCT:
         }
-
-        // '4' for int, just testing int rn
-        code = malloc(1 + 4); // expr_size
-        // push_decl()
-        code[0] = PUSH; // handle op modes e.g. 'USE_REG'
-        memcpy(&code[1], &tk.value.int_v, 4);
-
-        printf("OPCODE %.2x: ARG: %.2x %.2x %.2x %.2x\n",
-               code[0], code[1], code[2], code[3],
-               code[4]);
-
-               } */
+}
 
 uint8_t *
 bytecode_gen_nofile(void)
 {
         // 'main.c' initialized lexer, maybe change that cuz a lil confusing
-        expr(next_tk(), 0, true);
-        printf("%d\n", tk.type);
+        // expr(next_tk(), 0, true);
+        // printf("%d\n", tk.type);
 
-        /*
         struct Tk tk;
         lex_next(&tk);
         while (tk.type != END) {
+        switch (tk.type) {
+        case IDENT:
+                // gen_from_ident();
+                break;
+        case KW_BOOL:
+        case KW_CHAR:
+        case KW_INT:
+        case KW_NUM:                
+        case KW_STRING:
+        case KW_ARRAY:
+        case KW_STRUCT:
+                gen_decl(tk.type); break;
+        case KW_IF:
+        case KW_ELIF:
+        case KW_ELSE:
+        case KW_WHILE:
+        case KW_FOR:
+        case KW_SWITCH:
+        case KW_JMP:
+        case KW_FN:
+
+        }
                 switch (tk.type) {
                 case LIT_INT:
                 case LIT_NUM:
                 case PAREN_L:
-                case IDENTIFIER:
+                case IDENT:
                         expr(&tk, 0, false);
                         break;
                 }
 
                 
         }
-        */
         return NULL;
 }
 

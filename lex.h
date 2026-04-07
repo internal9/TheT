@@ -45,7 +45,10 @@ enum TkType {
         OP_BXOR,
         OP_BOR,
 
-        // keyword
+        // keywords
+        KW_NULL, // bad
+        KW_TRUE, // bad 2
+        KW_FALSE,
         KW_BOOL,
         KW_CHAR,
         KW_INT,
@@ -66,7 +69,6 @@ enum TkType {
         KW_FN,
 
         // literals
-        LIT_BOOL,
         LIT_CHAR,
         LIT_INT,
         LIT_NUM,
@@ -78,7 +80,7 @@ enum TkType {
           misc tokens can be interpreted in *various* ways,
           or are only ones serving *unique* purposes
         */
-        IDENTIFIER,        
+        IDENT,
         END = 5000, // aka 'eof' but conflicts with C macros
         PAREN_L,
         PAREN_R,
@@ -98,7 +100,9 @@ enum TkTypeGroup
         G_OP_ARITH,
         G_OP_LOGICAL,
         G_OP_BITWISE,
-        G_KEYWORD,
+        G_TYPE_SPEC,
+        G_STMT,
+        
         //        G_DECL, declare
         G_LITERAL,
         G_MISC

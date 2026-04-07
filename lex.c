@@ -1,4 +1,5 @@
 /* NOTES
+   - TBD: 'TkTypeGroup'
    - finish 'type_str'
    - handle hashmaping freeing after lex_err
    - use a global ptr for char instead of 10 billion char variables?
@@ -33,7 +34,7 @@ n  - Don't lex integer or number using '-' symbol, treat '-' as an operator (una
 #include <errno.h>
 #include <stdbool.h>
 
-#define TAB_WIDTH 8       // Assumption, despite ambiguity 
+#define TAB_WIDTH_GUESS 8       // Assumption, despite ambiguity 
 
 static long src_line = 1;
 static long src_column = 0;
@@ -42,6 +43,7 @@ static long src_len;
 static char *src_txt;
 
 static const char* keywords[] = {
+        "null", "true", "false", // keywords that are *literals*
         "bool", "char", "int", "num",
         "string", "array", "struct",
         "if", "elif", "else",
@@ -71,9 +73,9 @@ static inline void handle_tab_char(void)
 {
         WARN_FMT("Tab character '\\t' width assumed to be %d spaces despite ambigious "
                  "width and interpration, may lead to inaccurate lexing column numbers",
-                 TAB_WIDTH);
+                 TAB_WIDTH_GUESS);
         src_i++;
-        src_column += TAB_WIDTH;
+        src_column += TAB_WIDTH_GUESS;
 }
 
 static inline void handle_newline_char(void)
@@ -103,7 +105,7 @@ static void lex_bin_int(struct Tk *p_tk)
         p_tk->type_group = G_LITERAL;
         p_tk->type = LIT_INT;
         p_tk->value.int_v = 0;
-        char c = GET_C();;
+        char c = GET_C();
         // never write this again please
         for (int i = 0; i < 64; i++, (INCPOS(), c = GET_C())) {
                 if (c == '0' || c == '1') {
@@ -249,16 +251,17 @@ static void lex_keyword_or_identifier(struct Tk *p_tk)
         // -1 means key *not found*
         if (keyword_type_enum == -1) {
                 p_tk->type_group = G_MISC;
-                p_tk->type = IDENTIFIER;
+                p_tk->type = IDENT;
                 p_tk->value.txt = malloc(len + 1);
                 if (p_tk->value.txt == NULL)
-                        LEX_ERR("Failed memory alloc for keyword");
+                        LEX_ERR("Failed memory alloc for identifier");
                 p_tk->value.txt[len] = '\0';
                 memcpy(p_tk->value.txt, txt_start, len);
         }
         else {
-                p_tk->type_group = G_KEYWORD;
+                // p_tk->type_group = G_KEYWORD;
                 p_tk->type = (enum TkType) keyword_type_enum;
+                // make this better
         }
 }
 
@@ -408,13 +411,16 @@ static inline void handle_non_lexable(void)
                handle_multiline_comment());
 }
 
+// TBD stuff
 static inline void init_keywords_map(void)
 {
-        hashmap_init(&keywords_hashmap, HASHMAP_INIT_SIZE);
+        hashmap_init(&keywords_hashmap,
+                     HASHMAP_INIT_SIZE + HASHMAP_INIT_SIZE / 4);
         for (int i = 0; i < (int) (sizeof keywords / sizeof *keywords); i++)
-                // Keyword enums are in order startiing from 'KW_BOOL'
+                // Keyword enums are in order startiing from 'KW_NULL'
                 hashmap_put_int(&keywords_hashmap, keywords[i], strlen(keywords[i]),
-                                (int) KW_BOOL + i);
+                                (int) KW_NULL + i);
+        
 }
 
 static bool REACHED_END = false; // prob a better way to do this
