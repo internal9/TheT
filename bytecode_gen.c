@@ -106,17 +106,19 @@ static int64_t rsp = -1;
 static void
 sym_push(struct Tk* p_ident_tk)
 {
-
+	
 }
 
+static void
 sym_get(struct Tk* p_ident_tk)
 {
-
+	
 }
 
+static void
 sym_pop(struct Tk* p_ident_tk)
 {
-
+	
 }
 
 /*
@@ -292,26 +294,22 @@ data_type_from_kw(enum TkType kw_type)
 static void
 gen_decl(enum TkType kw_type)
 {
-        if (lex_next(&tk) != IDENT) {
-                tk_err(&tk, "Expected identifier");
-                exit(1);
-        }
+	struct Tk tk_ident;
+    if (lex_next(&tk_ident) != IDENT) {
+            tk_err(&tk_ident, "Expected identifier");
+            exit(1);
+    }
+	enum DataType type =
+		data_type_from_kw(kw_type);
 
-        if (lex_next(&tk) != OP_AS) {
-                
-                return;
-        }
-                
-        switch (kw_type) {
-        case KW_BOOL:
-                //               push_bool();
-        case KW_CHAR:
-        case KW_INT:
-        case KW_NUM:                
-        case KW_STRING:
-        case KW_ARRAY:
-        case KW_STRUCT:
-        }
+	long addr = push_sym(type, &tk_ident);	
+    if (lex_next(&tk) != OP_AS) {
+            // value is garbage
+            // OR
+            gen_null(addr);
+            return;
+    }
+	gen_assign(&tk_ident);
 }
 
 uint8_t *
@@ -336,26 +334,15 @@ bytecode_gen_nofile(void)
         case KW_ARRAY:
         case KW_STRUCT:
                 gen_decl(tk.type); break;
-        case KW_IF:
-        case KW_ELIF:
-        case KW_ELSE:
-        case KW_WHILE:
-        case KW_FOR:
-        case KW_SWITCH:
-        case KW_JMP:
-        case KW_FN:
-
-        }
-                switch (tk.type) {
-                case LIT_INT:
-                case LIT_NUM:
-                case PAREN_L:
-                case IDENT:
-                        expr(&tk, 0, false);
-                        break;
-                }
-
-                
+        case KW_IF: gen_if();
+        // case KW_ELIF: *handled in if*
+        // case KW_ELSE: *handled in if*
+        case KW_WHILE: gen_while();
+        case KW_FOR: gen_for();
+        case KW_SWITCH: gen_switch();
+        case KW_JMP: gen_jmp(); // not the instr
+        case KW_FN: gen_fn();
+		default:
         }
         return NULL;
 }
