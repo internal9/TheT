@@ -17,17 +17,45 @@
 // TBD: static struct Tk buf[some arbitrary num like 512];
 
 // emit(MOVSI, st_addr(), rm(bsize(arg)), arg)
-
 enum DataType {
-        INT,
-        NUM,
-        // bla bla bla..
+  BOOL,
+  CHAR,
+  INT,
+  NUM,
 };
 
+enum SymType {
+  LABEL,
+  VAR,
+  ARRAY,
+  STRUCT,
+  FUNC,
+};
+
+// find way to handle scope
 struct Symbol {
-        DataType type;
-        long st_addr;
-        
+	const char *id;
+	long line, column;
+  long addr;
+  union {
+      struct {
+        bool is_static;
+        enum DataType type;
+      } var;
+      struct {
+        enum DataType ret_type;
+        struct HashMap params;
+      } func;
+      struct {
+        bool is_static; // exists throughout program length
+        bool is_dynamic; // dynamically resizable
+        enum DataType base_type;
+        long len;
+      } array;
+      /* struct {
+          
+      } struc; */
+  } info;
 }
 
 static struct Tk tk;
@@ -43,13 +71,6 @@ static struct Tk *next_tk(void)
         }
         return buf + buf_i++;
 }
-
-/*
-static struct Tk *get_tk(int index)
-{
-        return buf + index;
-}
-*/
 
 static struct Tk *peek_tk(void)
 {
@@ -74,10 +95,28 @@ struct Tk *pop_tk()
 }
 */
 
-
 static void tk_buf_clear(void)
 {
         buf_i = tk_count = 0;
+}
+
+static long loc_addr = 0;
+static int64_t rsp = -1;
+
+static void
+sym_push(struct Tk* p_ident_tk)
+{
+
+}
+
+sym_get(struct Tk* p_ident_tk)
+{
+
+}
+
+sym_pop(struct Tk* p_ident_tk)
+{
+
 }
 
 /*
@@ -235,6 +274,20 @@ expr(struct Tk *p_left, int prec_limit, bool is_expr_start)
 }
 
 // account for floating-points later, cuz fp regs
+
+static enum DataType
+data_type_from_kw(enum TkType kw_type)
+{
+  switch(kw_type) {
+    case KW_BOOL: return BOOL;
+    case KW_CHAR: return CHAR;
+    case KW_INT: return INT;
+    case KW_NUM: return NUM;               
+    case KW_STRING: return STRING;
+    case KW_ARRAY: return ARRAY;
+    case KW_STRUCT: return STRUCT;
+  }
+}
 
 static void
 gen_decl(enum TkType kw_type)
