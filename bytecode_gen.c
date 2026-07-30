@@ -172,6 +172,13 @@ sym_get(struct Tk *p_ident_tk)
             strlen(p_ident_tk->value.txt));
 }
 
+static void
+sym_remove(struct Tk *p_ident_tk)
+{
+  hashmap_delete(&symbol_table,
+            p_ident_tk->value.txt,
+            strlen(p_ident_tk->value.txt));
+}
 
 static bool
 sym_pop(int count) // struct Tk* p_ident_tk) ?
