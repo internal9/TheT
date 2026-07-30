@@ -59,22 +59,21 @@ struct Symbol {
                struct {
                        enum DataType ret_type;
                        // struct HashMap params;
-            struct Symbol **params_array;
+               struct Symbol **params_array;
                        int param_count;
                } func;
-                struct {
+               struct {
                        bool is_dynamic; // dynamically resizable
                        enum DataType base_type;
-         int dimension_sizes[MAX_ARRAY_DIMENSION_COUNT]; // max dimension count
-         int dimension_count;
+                       int dimension_sizes[MAX_ARRAY_DIMENSION_COUNT]; // max dimension count
+                       int dimension_count;
                } array;
                 struct {
                        // idk
                } struc; // yeah
-      struct {
-
-
-      } struct_type;
+               struct {
+        
+               } struct_type;
        } info;
    /* const char *id; unnecessary? */
    const char *ident;
