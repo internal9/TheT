@@ -563,7 +563,7 @@ gen_decl_fn(void) // enum DataType ret_type)
 
 // can_cast_type();
 static void
-gen_fn_call(struct Tk *p_ident_tk)
+gen_fn_call(struct Tk *p_ident_tk, enum DataType var_to_assign_to_type) // 'var_to'assign_to_type' if fn call is in expr
 {
    struct Symbol *p_sym = sym_get(p_ident_tk);
    // presumbly a forward reference to a function being declared later
@@ -573,6 +573,7 @@ gen_fn_call(struct Tk *p_ident_tk)
                                                         strlen(p_ident_tk->value.txt));
       if (forward_fn_calls == NULL) {
         forward_fn_calls = malloc(sizeof(struct ForwardFnCalls));
+        forward_fn_calls->calls_array = NULL;
         forward_fn_calls->len = 0;
         hashmap_put_ptr(&forward_fn_call_table,
                         p_ident_tk->value.txt,
@@ -580,16 +581,23 @@ gen_fn_call(struct Tk *p_ident_tk)
                         forward_fn_calls
                        );
       }
-      else {
-        forward_fn_calls->calls_array = realloc(forward_fn_calls->calls_array,
-                                                sizeof(struct ForwardFnCall) * (forward_fn_calls->len + 1));
-        forward_fn_calls->calls_array[forward_fn_calls->len++] = (struct ForwardFnCall) {
-          .line = p_sym->line;
-          .column = p_sym->column;
-          .
-        };
-      }
+
+      forward_fn_calls->calls_array = realloc(forward_fn_calls->calls_array,
+                                              sizeof(struct ForwardFnCall) * (forward_fn_calls->len + 1));
+      forward_fn_calls->calls_array[forward_fn_calls->len++] = (struct ForwardFnCall) {
+        .line = p_sym->line,
+        .column = p_sym->column,
+        .param_count = 0,
+        .var_to_assign_to_type = var_to_assign_to_type,
+      };
+
+      for (int i = 0; i < p_sym->info.func.param_count; i++)  {
+      
+
+     }
    }
+
+  // asdasdasdd
    for (int i = 0; i < p_sym->info.func.param_count; i++)  {
       
 
