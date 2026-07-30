@@ -95,7 +95,12 @@ struct ForwardFnCall {
   enum DataType var_to_assign_to_type;
 };
 
-static struct HashMap forward_fn_calls;
+struct ForwardFnCalls {
+       struct ForwardFnCall* calls_array;
+       int len;
+};
+
+static struct HashMap forward_fn_call_table;
 
 
 static struct Tk tk;
@@ -561,17 +566,28 @@ static void
 gen_fn_call(struct Tk *p_ident_tk)
 {
    struct Symbol *p_sym = sym_get(p_ident_tk);
+   // presumbly a forward reference to a function being declared later
    if (p_sym == NULL) {
-      struct ForwardFnCall* fn_calls_array = hashmap_get_ptr(&forward_fn_calls,
+      struct ForwardFnCalls *forward_fn_calls = hashmap_get_ptr(&forward_fn_call_table,
                                                         p_ident_tk->value.txt,
                                                         strlen(p_ident_tk->value.txt));
-      if (fn_calls_array == NULL) {
-        fn_calls_array = malloc(sizeof(struct ForwardFnCall));
-        hashmap_put_ptr(&forward_fn_calls,
+      if (forward_fn_calls == NULL) {
+        forward_fn_calls = malloc(sizeof(struct ForwardFnCalls));
+        forward_fn_calls->len = 0;
+        hashmap_put_ptr(&forward_fn_call_table,
                         p_ident_tk->value.txt,
                         strlen(p_ident_tk->value.txt),
-                        fn_calls_array
-                      );
+                        forward_fn_calls
+                       );
+      }
+      else {
+        forward_fn_calls->calls_array = realloc(forward_fn_calls->calls_array,
+                                                sizeof(struct ForwardFnCall) * (forward_fn_calls->len + 1));
+        forward_fn_calls->calls_array[forward_fn_calls->len++] = (struct ForwardFnCall) {
+          .line = p_sym->line;
+          .column = p_sym->column;
+          .
+        };
       }
    }
    for (int i = 0; i < p_sym->info.func.param_count; i++)  {
@@ -637,7 +653,7 @@ bytecode_gen_nofile(void)
 {
    /* init */
    hashmap_init(&symbol_table, HASHMAP_INIT_SIZE);
-   hashmap_init(&forward_fn_calls, HASHMAP_INIT_SIZE);
+   hashmap_init(&forward_fn_call_table, HASHMAP_INIT_SIZE);
 
 
        // 'main.c' initialized lexer, maybe change that cuz a lil confusing
