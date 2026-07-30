@@ -86,14 +86,17 @@ struct Symbol {
 };
 
 // forward reference to a fn, calling a fn that doesn't exist (presumbly declared later / typo / doesn't exist)
-struct {
+struct ForwardFnCall {
   long line, column;
   struct Symbol **params_array;
   int param_count;
   /* default is NULL, *unless* if the fn call
   is in an assignment expression, declaration or not */
   enum DataType var_to_assign_to_type;
-} forward_fn_call
+};
+
+static struct HashMap forward_fn_calls;
+
 
 static struct Tk tk;
 static struct Tk buf[512];
@@ -188,6 +191,7 @@ sym_remove(struct Tk *p_ident_tk)
             strlen(p_ident_tk->value.txt));
 }
 
+// idk
 static bool
 sym_pop(int count) // struct Tk* p_ident_tk) ?
 {
@@ -622,6 +626,7 @@ bytecode_gen_nofile(void)
 {
    /* init */
    hashmap_init(&symbol_table, HASHMAP_INIT_SIZE);
+   hashmap_init(&forward_fn_calls, HASHMAP_INIT_SIZE);
 
 
        // 'main.c' initialized lexer, maybe change that cuz a lil confusing
