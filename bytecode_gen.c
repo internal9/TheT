@@ -591,10 +591,10 @@ gen_fn_call(struct Tk *p_ident_tk, enum DataType var_to_assign_to_type) // 'var_
         .var_to_assign_to_type = var_to_assign_to_type,
       };
 
-      for (int i = 0; i < p_sym->info.func.param_count; i++)  {
-      
-
-     }
+      for (struct Tk *p_tk = next_tk(); p_tk->type != PAREN_R; p_tk = next_tk()) {
+        // enum DataType param_type = expr(p_tk, 0, true);
+        
+      }
    }
 
   // asdasdasdd
