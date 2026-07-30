@@ -85,6 +85,15 @@ struct Symbol {
    int scope_level;
 };
 
+// forward reference to a fn, calling a fn that doesn't exist (presumbly declared later / typo / doesn't exist)
+struct {
+  long line, column;
+  struct Symbol **params_array;
+  int param_count;
+  /* default is NULL, *unless* if the fn call
+  is in an assignment expression, declaration or not */
+  enum DataType var_to_assign_to_type;
+} forward_fn_call
 
 static struct Tk tk;
 static struct Tk buf[512];
