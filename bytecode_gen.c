@@ -59,7 +59,7 @@ struct Symbol {
                struct {
                        enum DataType ret_type;
                        // struct HashMap params;
-               struct Symbol **params_array;
+                       struct Symbol **params_array;
                        int param_count;
                } func;
                struct {
@@ -561,10 +561,21 @@ static void
 gen_fn_call(struct Tk *p_ident_tk)
 {
    struct Symbol *p_sym = sym_get(p_ident_tk);
-   if (p_sym == NULL) /* handle */ {}
-   if (next_tk()->type != PAREN_L) /* handle */ ;
+   if (p_sym == NULL) {
+      struct ForwardFnCall* fn_calls_array = hashmap_get_ptr(&forward_fn_calls,
+                                                        p_ident_tk->value.txt,
+                                                        strlen(p_ident_tk->value.txt));
+      if (fn_calls_array == NULL) {
+        fn_calls_array = malloc(sizeof(struct ForwardFnCall));
+        hashmap_put_ptr(&forward_fn_calls,
+                        p_ident_tk->value.txt,
+                        strlen(p_ident_tk->value.txt),
+                        fn_calls_array
+                      );
+      }
+   }
    for (int i = 0; i < p_sym->info.func.param_count; i++)  {
-
+      
 
    }
 }
