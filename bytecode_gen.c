@@ -288,7 +288,7 @@ static void instr_debug(enum TkType type)
  rather than a standalone literal e.g. '2'
 */
 static bool
-expr(struct Tk *p_left, int prec_limit, bool is_expr_start)
+expr(struct Tk *p_left, int prec_limit, bool is_expr_start, enum DataType *p_expr_type_result)
 {
        static bool R1_use = false;
 
@@ -300,7 +300,8 @@ expr(struct Tk *p_left, int prec_limit, bool is_expr_start)
 
        bool is_left_expr = false;
        switch(p_left->type) {
-       case LIT_INT: break;
+       case LIT_INT: *p_expr_type_result = INT break;
+       case LIT_NUM: *p_expr_type_result = NUM break;
        case PAREN_L:
                is_left_expr = expr(next_tk(), 0, false);
                if (!is_left_expr)
